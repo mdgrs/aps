@@ -1,40 +1,32 @@
 (ns mdgrs.aps
   (:require [clj-http.client :as client]
-            [clojure.data.json :as json])
-  (:gen-class))
+            [clojure.data.json :as json]
+            [oz.core :as oz]
+            [mdgrs.fetcher :as fetch]))
 
-(defn greet
-  "Callable entry point to the application."
-  [data]
-  (println (str "Hello, " (or (:name data) "World") "!")))
+;; sample data
+(def today-string "2022-03-10")
+(def data-sgv (fetch/get-sgv-since today-string 50))
+(def data-treatment (fetch/get-treatments-since today-string 50))
+(def profile (fetch/get-current-profile))
+(def basals (fetch/get-temp-basal data-treatment))
 
-(defn -main
-  "I don't do a whole lot ... yet."
-  [& args]
-  (greet {:name (first args)}))
-(+ 1 1)
 
-(def root "https://cgm-mdgrs.herokuapp.com/api/v1/")
+(prn (first data-sgv))
 
-(def date "2021-12-20")
+;; plot stuff
+(def test-plot
+  {:data {:values data-sgv}
+   :encoding {:x {:field "dateString"}
+              :y {:field "sgv"}}
+   :mark "line"})
+(def test-plot2
+  {:data {:values basals}
+   :encoding {:x {:field "created_at"}
+              :y {:field "rate"}}
+   :mark "line"})
 
-(defn get-sgv-since
-  ([date] (get-sgv-since date 5))
-  ([date count]
-   (let [url (str root "entries.json?find[created_at][$gte]=" date "&count=" count)]
-     (json/read-json (:body (client/get url))))))
-(defn get-sgv-date
-  ([date] (get-sgv-date date 5))
-  ([date count]
-   (let [url (str root "times/" date ".json?count=" count)]
-     (json/read-json (:body (client/get url))))))
 
-(defn get-treatments-since
-  ([date] (get-treatments-since date 5))
-  ([date count]
-   (let [url (str root "treatments.json?find[created_at][$gte]=" date "&count=" count)]
-     (json/read-json (:body (client/get url))))))
-(get-treatments-since "2021-12-20")
-(get-sgv-date "2021-12-20")
-(def data (get-sgv-since "2021-12-20" 500))
-(def data-treatment (get-treatments-since "2021-12-20" 500))
+(oz/start-server!)
+(oz/view! test-plot)
+(oz/view! test-plot2)
